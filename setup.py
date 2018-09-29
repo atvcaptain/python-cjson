@@ -24,6 +24,6 @@ setup(name         = "python-cjson",
         "Topic :: Software Development :: Libraries :: Python Modules"
       ],
       ext_modules  = [
-        Extension(name='cjson', sources=['cjson.c'], define_macros=macros)
+        Extension(name='e2icjson', sources=['cjson.c'], define_macros=macros)
       ]
 )

@@ -1202,28 +1202,28 @@ PyDoc_STRVAR(module_doc,
 /* Initialization function for the module (*must* be called initcjson) */
 
 PyMODINIT_FUNC
-initcjson(void)
+inite2icjson(void)
 {
     PyObject *m;
 
-    m = Py_InitModule3("cjson", cjson_methods, module_doc);
+    m = Py_InitModule3("e2icjson", cjson_methods, module_doc);
 
     if (m == NULL)
         return;
 
-    JSON_Error = PyErr_NewException("cjson.Error", NULL, NULL);
+    JSON_Error = PyErr_NewException("e2icjson.Error", NULL, NULL);
     if (JSON_Error == NULL)
         return;
     Py_INCREF(JSON_Error);
     PyModule_AddObject(m, "Error", JSON_Error);
 
-    JSON_EncodeError = PyErr_NewException("cjson.EncodeError", JSON_Error, NULL);
+    JSON_EncodeError = PyErr_NewException("e2icjson.EncodeError", JSON_Error, NULL);
     if (JSON_EncodeError == NULL)
         return;
     Py_INCREF(JSON_EncodeError);
     PyModule_AddObject(m, "EncodeError", JSON_EncodeError);
 
-    JSON_DecodeError = PyErr_NewException("cjson.DecodeError", JSON_Error, NULL);
+    JSON_DecodeError = PyErr_NewException("e2icjson.DecodeError", JSON_Error, NULL);
     if (JSON_DecodeError == NULL)
         return;
     Py_INCREF(JSON_DecodeError);
