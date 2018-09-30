@@ -13,6 +13,7 @@ typedef struct JSONData {
     char *end; // pointer to the string end
     char *ptr; // pointer to the current parsing position
     int  all_unicode; // make all output strings unicode if true
+    int source_unicode;
 } JSONData;
 
 static PyObject* encode_object(PyObject *object);
@@ -115,13 +116,13 @@ decode_bool(JSONData *jsondata)
 static PyObject*
 decode_string(JSONData *jsondata)
 {
-    PyObject *object;
-    int c, escaping, has_unicode, string_escape, slash_unescape;
+    int c, escaping, unicode_escape, string_escape, slash_unescape, has_non_ascii;
     Py_ssize_t len;
     char *ptr;
+    PyObject *object = NULL;
 
     // look for the closing quote
-    escaping = has_unicode = string_escape = slash_unescape = False;
+    escaping = unicode_escape = string_escape = slash_unescape = has_non_ascii = False;
     ptr = jsondata->ptr + 1;
     while (True) {
         c = *ptr;
@@ -137,12 +138,12 @@ decode_string(JSONData *jsondata)
             } else if (c == '"') {
                 break;
             } else if (!isascii(c)) {
-                has_unicode = True;
+                has_non_ascii = True;
             }
         } else {
             switch(c) {
             case 'u':
-                has_unicode = True;
+                unicode_escape = True;
                 break;
             case '"':
             case 'r':
@@ -177,8 +178,24 @@ decode_string(JSONData *jsondata)
     else
         len = ptr - jsondata->ptr - 1;
 
-    if (has_unicode || 1 == jsondata->all_unicode) {
-        object = PyUnicode_DecodeUnicodeEscape(jsondata->ptr+1, len, NULL);
+    if (unicode_escape || 1 == jsondata->all_unicode || (jsondata->source_unicode && has_non_ascii)) {
+        if (!jsondata->source_unicode && has_non_ascii) { // probably this is UTF-8 with unicode_escape
+            
+            PyObject *tmpObject = PyUnicode_DecodeUTF8(jsondata->ptr+1, len, NULL);
+            if (tmpObject != NULL) {
+                object = PyUnicode_AsRawUnicodeEscapeString(tmpObject); 
+                Py_XDECREF(tmpObject);
+
+                if (object) {
+                    tmpObject = object;
+                    object = PyUnicode_DecodeUnicodeEscape(PyString_AS_STRING(tmpObject), PyString_Size(tmpObject), NULL);
+                    Py_XDECREF(tmpObject);
+                }
+            }
+        } else {
+            object = PyUnicode_DecodeUnicodeEscape(jsondata->ptr+1, len, NULL);
+        }
+
         if (object != NULL && 2 == jsondata->all_unicode) {
             PyObject *tmpObject = PyUnicode_AsUTF8String(object);
             Py_XDECREF(object);
@@ -1144,9 +1161,11 @@ JSON_decode(PyObject *self, PyObject *args, PyObject *kwargs)
         if (str == NULL) {
             return NULL;
         }
+        jsondata.source_unicode = True;
     } else {
         Py_INCREF(string);
         str = string;
+        jsondata.source_unicode = False;
     }
 
     if (PyString_AsStringAndSize(str, &(jsondata.str), NULL) == -1) {
