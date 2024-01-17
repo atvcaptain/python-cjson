@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from distutils.core import setup, Extension
+from setuptools import setup, Extension
 
 __version__ = "1.2.2"
 
